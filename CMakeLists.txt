@@ -10,14 +10,18 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(Function)
 #三方库
 ## OpenCV
-set(CMAKE_PREFIX_PATH "F:/ThirdPart/OpenCV" ${CMAKE_PREFIX_PATH})
+list(APPEND CMAKE_PREFIX_PATH "F:/ThirdPart/OpenCV")
 find_package(OpenCV REQUIRED)
+## PLOG
+list(APPEND CMAKE_PREFIX_PATH "F:/ThirdPart/plog")
+find_package(plog REQUIRED)
 
 # 变量和目录设置
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 list(APPEND ALL_INCLUDE_DIRS
         ${OpenCV_INCLUDE_DIRS}
+        F:/ThirdPart/plog/include
 )
 list(APPEND ALL_LIBS
         ${OpenCV_LIBRARIES}

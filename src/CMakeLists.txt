@@ -3,6 +3,7 @@ add_executable(${PROJECT_NAME}
 )
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/base)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/common)
 
 list(APPEND ALL_LIBS
     lib_base
