@@ -3,8 +3,8 @@ Real-time panoramic video stitching and object tracking
 
 ## TODO
 
-- [ ] 完善`base`库，加入现场安全的队列等常用的数据结构
-- [ ] 完善`log`库，对于每次运行的结果，不要用`imshow`，而是根据运行时间创个文件夹，把所有中间结果以图片的形式保存下来
+- [x] 完善`base`库，加入线程安全的队列等常用的数据结构
+- [x] 完善`log`库，对于每次运行的结果，不要用`imshow`，而是根据运行时间创个文件夹，把所有中间结果以图片的形式保存下来
 
 
 

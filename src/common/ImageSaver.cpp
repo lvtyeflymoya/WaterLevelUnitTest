@@ -14,6 +14,9 @@ ImageSaver::ImageSaver(const std::string &folderPath)
 
 ImageSaver::~ImageSaver()
 {
+    if(this->mats.empty())
+        return;
+    
     // 获取当前时间并格式化为文件夹名称
     auto now = std::chrono::system_clock::now();
     auto nowTimeT = std::chrono::system_clock::to_time_t(now);
@@ -29,7 +32,7 @@ ImageSaver::~ImageSaver()
 
     for (size_t i = 0; i < mats.size(); ++i)
     {
-        std::string filePath = timeFolder + "/" + names[i];
+        std::string filePath = timeFolder + "/" + names[i] + ".jpg";
         if (!cv::imwrite(filePath, mats[i]))
         {
             std::cerr << "Error saving image: " << filePath << std::endl;
