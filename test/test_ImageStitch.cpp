@@ -15,7 +15,9 @@ cv::Mat ImageStitch::getStitchedImage(const cv::Mat &img_target, const cv::Mat &
     this->img_target = img_target;
     this->img_reference = img_reference;
     this->imageRegistration();
-    return this->imageWarping();
+    auto warped_target = this->imageWarping();
+    auto result = this->imageBlending(warped_target);
+    return result;
 }
 
 void ImageStitch::imageRegistration()
@@ -77,7 +79,7 @@ cv::Mat ImageStitch::imageWarping()
     // 计算目标图像的透视变换后四个角点的位置
     this->calculateWarpedCorners();
 
-    // 计算拼接图像的大小
+    // 计算参考图像的四个角点的位置
     cv::Size img_reference_size = this->img_reference.size();
     std::vector<cv::Point2f> img_reference_corners = {
         cv::Point2f(0, 0),
@@ -89,7 +91,7 @@ cv::Mat ImageStitch::imageWarping()
     std::vector<cv::Point2f> all_corners = this->warped_tartget_corners;
     all_corners.insert(all_corners.end(), img_reference_corners.begin(), img_reference_corners.end());
 
-    // 计算拼接图像的边界
+    // 计算拼接图像的边界(由此可以计算拼接图像的大小)
     float min_x = std::min_element(all_corners.begin(), all_corners.end(), [](const cv::Point2f &a, const cv::Point2f &b)
                                    { return a.x < b.x; })
                       ->x;
@@ -104,31 +106,74 @@ cv::Mat ImageStitch::imageWarping()
                       ->y;
 
     // 计算平移变换矩阵
-    cv::Mat translation = cv::Mat::eye(3, 3, CV_64F);
+    this->translation = cv::Mat::eye(3, 3, CV_64F);
     if (min_x < 0)
-        translation.at<double>(0, 2) = -min_x;
+        this->translation.at<double>(0, 2) = -min_x;
     if (min_y < 0)
-        translation.at<double>(1, 2) = -min_y;
-
-    std::cout << "translation: \n"
-              << translation << std::endl;
+        this->translation.at<double>(1, 2) = -min_y;
 
     // 变换target到reference坐标系下,并移动坐标系原点,使得最终的拼接图像的左上角为(0,0)
     cv::Mat warped_target;
     int result_width = static_cast<int>(std::floor(max_x - min_x) + 1);
     int result_height = static_cast<int>(std::floor(max_y - min_y) + 1);
-    cv::warpPerspective(this->img_target, warped_target, translation * this->H, cv::Size(result_width, result_height));
+    cv::warpPerspective(this->img_target, warped_target, this->translation * this->H,
+                        cv::Size(result_width, result_height));
     imageSaver.addImage(warped_target, "warped_target");
+    return warped_target;
+}
 
+cv::Mat ImageStitch::imageBlending(const cv::Mat &warped_target)
+{
     // 将参考图像复制到拼接图像中
     cv::Mat result_image = warped_target.clone();
-    int roi_x = static_cast<int>(translation.at<double>(0, 2));
-    int roi_y = static_cast<int>(translation.at<double>(1, 2));
+    cv::Size img_reference_size = this->img_reference.size();
+
+    // roi指的是reference图像在拼接图像中的位置
+    int roi_x = static_cast<int>(this->translation.at<double>(0, 2));
+    int roi_y = static_cast<int>(this->translation.at<double>(1, 2));
     int roi_width = img_reference_size.width;
     int roi_height = img_reference_size.height;
 
-    cv::Mat roi(result_image, cv::Rect(roi_x, roi_y, roi_width, roi_height));
-    this->img_reference.copyTo(roi);
+    cv::Mat ref_roi(result_image, cv::Rect(roi_x, roi_y, roi_width, roi_height));
+    this->img_reference.copyTo(ref_roi);
+
+    // 确定重叠区域的二值化掩码(在img_reference坐标系下)
+    cv::Mat overlap_mask = cv::Mat::zeros(ref_roi.size(), CV_8UC1);
+    for (int y = 0; y < ref_roi.rows; ++y)
+    {
+        for (int x = 0; x < ref_roi.cols; ++x)
+        {
+            cv::Vec3b ref_pixel = ref_roi.at<cv::Vec3b>(y, x);
+            cv::Vec3b target_pixel = warped_target.at<cv::Vec3b>(y + roi_y, x + roi_x);
+            if (cv::norm(ref_pixel) > 0 && cv::norm(target_pixel) > 0)
+                overlap_mask.at<uchar>(y, x) = 255;
+        }
+    }
+    // 将overlap_mask转到warped_target坐标系下
+    cv::warpPerspective(overlap_mask, overlap_mask, this->translation, cv::Size(warped_target.cols, warped_target.rows));
+    imageSaver.addImage(overlap_mask, "overlap_mask");
+
+    // 定义重叠区域的ROI
+    cv::Rect overlap_roi = cv::boundingRect(overlap_mask);
+
+    // 羽化融合
+    for (int y = overlap_roi.y; y < overlap_roi.y + overlap_roi.height; ++y)
+    {
+        for (int x = overlap_roi.x; x < overlap_roi.x + overlap_roi.width; ++x)
+        {
+            cv::Vec3b ref_pixel = result_image.at<cv::Vec3b>(y, x);
+            cv::Vec3b target_pixel = warped_target.at<cv::Vec3b>(y, x);
+
+            // 计算权重 (线性梯度)
+            float alpha = static_cast<float>(x - overlap_roi.x) / overlap_roi.width;
+            // alpha = 0.5;
+
+            // 混合像素值
+            if (cv::norm(ref_pixel) > 0 && cv::norm(target_pixel) > 0)
+                result_image.at<cv::Vec3b>(y, x) =
+                    ref_pixel * alpha + target_pixel * (1.0f - alpha);
+        }
+    }
 
     return result_image;
 }
@@ -137,8 +182,8 @@ int main()
 {
     cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_SILENT);
 
-    cv::Mat img_reference = cv::imread("F:/MasterGraduate/02-ReferenceCode/01-VideoStitching/image/4.jpg");
-    cv::Mat img_target = cv::imread("F:/MasterGraduate/02-ReferenceCode/01-VideoStitching/image/3.jpg");
+    cv::Mat img_reference = cv::imread("../datasets/images/data3/02.png");
+    cv::Mat img_target = cv::imread("../datasets/images/data3/01.png");
     ImageStitch stitcher;
     cv::Mat stitched_image = stitcher.getStitchedImage(img_target, img_reference);
     imageSaver.addImage(stitched_image, "stitched_image");

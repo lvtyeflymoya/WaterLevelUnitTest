@@ -33,6 +33,6 @@ def save_frames_as_png(video_path, output_folder):
     print("视频帧保存完毕！")
 
 if __name__ == '__main__':
-    video_file = 'F:/MasterGraduate/02-ReferenceCode/02-gpu-based-image-stitching/datasets/air-4cam-mp4/01.mp4'
-    save_folder = './01/'
+    video_file = 'F:/MasterGraduate/02-ReferenceCode/02-gpu-based-image-stitching/datasets/air-4cam-mp4/00.mp4'
+    save_folder = './00/'
     save_frames_as_png(video_file, save_folder)
