@@ -14,7 +14,7 @@ public:
 private:
     void imageRegistration();
     void calculateWarpedCorners();
-    cv::Mat imageWarping();
+    cv::Mat imageAlignment();
     cv::Mat imageBlending(const cv::Mat &warped_target);
 
 private:

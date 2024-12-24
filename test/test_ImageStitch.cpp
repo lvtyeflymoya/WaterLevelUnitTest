@@ -15,7 +15,7 @@ cv::Mat ImageStitch::getStitchedImage(const cv::Mat &img_target, const cv::Mat &
     this->img_target = img_target;
     this->img_reference = img_reference;
     this->imageRegistration();
-    auto warped_target = this->imageWarping();
+    auto warped_target = this->imageAlignment();
     auto result = this->imageBlending(warped_target);
     return result;
 }
@@ -74,7 +74,7 @@ void ImageStitch::calculateWarpedCorners()
     cv::perspectiveTransform(img_target_corners, this->warped_tartget_corners, this->H);
 }
 
-cv::Mat ImageStitch::imageWarping()
+cv::Mat ImageStitch::imageAlignment()
 {
     // 计算目标图像的透视变换后四个角点的位置
     this->calculateWarpedCorners();
@@ -156,22 +156,71 @@ cv::Mat ImageStitch::imageBlending(const cv::Mat &warped_target)
     // 定义重叠区域的ROI
     cv::Rect overlap_roi = cv::boundingRect(overlap_mask);
 
-    // 羽化融合
+    // 计算能量图 (使用 Sobel 梯度)
+    cv::Mat gray_ref, gray_target;
+    cv::cvtColor(this->img_reference, gray_ref, cv::COLOR_BGR2GRAY);
+    cv::warpPerspective(gray_ref, gray_ref, this->translation, cv::Size(warped_target.cols, warped_target.rows));
+    cv::cvtColor(warped_target, gray_target, cv::COLOR_BGR2GRAY);
+
+    cv::Mat gradient_ref, gradient_target;
+    cv::Sobel(gray_ref, gradient_ref, CV_32F, 1, 0, 3);
+    cv::Sobel(gray_target, gradient_target, CV_32F, 1, 0, 3);
+
+    cv::Mat energy_map = cv::abs(gradient_ref - gradient_target);
+    imageSaver.addImage(energy_map, "energy_map");
+
+    // 动态规划寻找最佳拼缝
+    cv::Mat seam_mask = cv::Mat::zeros(overlap_mask.size(), CV_8UC1);
+    std::vector<int> seam(overlap_roi.height, 0);
+
     for (int y = overlap_roi.y; y < overlap_roi.y + overlap_roi.height; ++y)
     {
         for (int x = overlap_roi.x; x < overlap_roi.x + overlap_roi.width; ++x)
         {
-            cv::Vec3b ref_pixel = result_image.at<cv::Vec3b>(y, x);
-            cv::Vec3b target_pixel = warped_target.at<cv::Vec3b>(y, x);
+            if (y == overlap_roi.y)
+            {
+                // 初始化第一行的拼缝
+                seam[y - overlap_roi.y] = x;
+            }
+            else
+            {
+                // 获取上一行的最佳拼缝位置并计算最小代价
+                int prev_x = seam[y - overlap_roi.y - 1];
+                int best_x = prev_x;
+                float min_cost = energy_map.at<float>(y - 1, prev_x);
 
-            // 计算权重 (线性梯度)
-            float alpha = static_cast<float>(x - overlap_roi.x) / overlap_roi.width;
-            // alpha = 0.5;
+                if (prev_x > overlap_roi.x && energy_map.at<float>(y - 1, prev_x - 1) < min_cost)
+                {
+                    best_x = prev_x - 1;
+                    min_cost = energy_map.at<float>(y - 1, prev_x - 1);
+                }
+                if (prev_x < overlap_roi.x + overlap_roi.width - 1 && energy_map.at<float>(y - 1, prev_x + 1) < min_cost)
+                {
+                    best_x = prev_x + 1;
+                }
 
-            // 混合像素值
-            if (cv::norm(ref_pixel) > 0 && cv::norm(target_pixel) > 0)
-                result_image.at<cv::Vec3b>(y, x) =
-                    ref_pixel * alpha + target_pixel * (1.0f - alpha);
+                seam[y - overlap_roi.y] = best_x;
+            }
+
+            // 标记拼缝
+            seam_mask.at<uchar>(y, seam[y - overlap_roi.y]) = 255;
+        }
+    }
+    imageSaver.addImage(seam_mask, "seam_mask");
+
+    // 图像融合，基于拼缝
+    for (int y = overlap_roi.y; y < overlap_roi.y + overlap_roi.height; ++y)
+    {
+        for (int x = overlap_roi.x; x < overlap_roi.x + overlap_roi.width; ++x)
+        {
+            if (x <= seam[y - overlap_roi.y])
+            {
+                result_image.at<cv::Vec3b>(y, x) = warped_target.at<cv::Vec3b>(y, x);
+            }
+            else
+            {
+                result_image.at<cv::Vec3b>(y, x) = this->img_reference.at<cv::Vec3b>(y - roi_y, x - roi_x);
+            }
         }
     }
 
