@@ -8,6 +8,8 @@ list(APPEND ALL_TEST_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/test_ImageStitch.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_ImageSaver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_ThreadPool.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_detailed_stitch.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_highlevel_stitch.cpp
 )
 
 # message("ALL_TEST_FILES: ${ALL_TEST_FILES}")
