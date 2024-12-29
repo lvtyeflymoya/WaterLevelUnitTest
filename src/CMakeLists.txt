@@ -4,9 +4,12 @@ add_executable(${PROJECT_NAME}
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/base)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/common)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sensor)
 
 list(APPEND ALL_LIBS
     lib_base
+    lib_common
+    lib_sensor
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${ALL_INCLUDE_DIRS})

@@ -60,6 +60,15 @@ Real-time panoramic video stitching and object tracking
 
 
 
+## 开发遇到的问题
+
+1.plog库在子模块中（比如Sensor）输出不了日志
+
+- 原因：plog实际上是全局共享了一个静态变量，但是动态库和依赖它的可执行文件不共享全局变量，所以即使在主进程的`main()`中初始化了一个plog实例(通过`plog::init()`)，动态库里面还是访问不到这个实例
+- 解决办法：动态库中独立初始化一个plog实例
+
+
+
 ## 一些疑问
 
 1.多图拼接时，哪张图片为基准图像？
