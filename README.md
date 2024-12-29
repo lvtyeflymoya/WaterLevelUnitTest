@@ -14,8 +14,9 @@ Real-time panoramic video stitching and object tracking
 - [x] 比较自己实现的拼接和`openCV`里的sitch的例子的区别
 - [ ] 弄明白Wave Correct、Bundle Adjustment的原理
 - [ ] 仔细看一下`cv::detail`里的各个拼接模块怎么用，能够做到自由地组合并添加新的算法进去
-- [ ] 试一下kaggle之类的免费云服务器
+- [x] 试一下kaggle、colab、aistudio之类的免费云服务器
 - [ ] 找出图像拼接近几年的所有顶刊顶会论文
+- [ ] **开发图像采集模块**
 
 
 
@@ -97,7 +98,7 @@ Real-time panoramic video stitching and object tracking
 
 (1)图像获取 → (2) 图像校准（可选） → (3) 图像配准 → (4) 图像对齐 → (5) 图像融合 → (6) 全局优化（可选） 
 
-- 全局优化包括Bundle Adjustment、Wave Correct...很多论文里貌似都没有全局优化，但是这2个步骤非常重要，**很影响观感**
+- 全局优化包括Bundle Adjustment、Wave Correct、矩形化...很多论文里貌似都没有全局优化，但是这2个步骤非常重要，**很影响观感**
 
 
 
@@ -125,6 +126,17 @@ Real-time panoramic video stitching and object tracking
 
 
 
+8.论文中提到的“基线”是什么意思？比如“大基线深度单应性网络”
+
+- “基线”指的是2个相机之间的**相对位置**和**角度**之间的差异。大基线就说明2个相机的位置和角度差异比较大
+
+
+
+9.什么是视差？
+
+- 视差指的是由两个不同视角拍摄的图像中**同一物体的对应点**在水平或垂直方向上的**像素差异**。产生原因：2个相机有一定的基线
+- 视差与物体的深度有直接的关系：2者大小成反比
+
 
 
 ## 参考
@@ -133,3 +145,5 @@ Real-time panoramic video stitching and object tracking
 - [suncle1993/VideoStitching: solve real time video stitching problem： 4 camera example by opencv surf](https://github.com/suncle1993/VideoStitching)
 - https://www.bilibili.com/video/BV1ri4y1s72t
 - [AutoStitch笔记1 - 知乎](https://zhuanlan.zhihu.com/p/56633416)
+- [文献汇总1](https://github.com/DoongLi/awesome-homography-estimation-and-image-alignment)
+- [文献汇总2](https://github.com/MelodYanglc/Survey)
