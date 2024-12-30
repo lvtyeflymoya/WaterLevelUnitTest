@@ -1,5 +1,4 @@
 #include "LocalImage.h"
-#include "common.h"
 
 int main()
 {
