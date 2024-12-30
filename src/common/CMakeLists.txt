@@ -10,6 +10,9 @@ PUBLIC
 )
 
 target_link_libraries(lib_common
-PUBLIC 
+PRIVATE 
     ${ALL_LIBS}
 )
+
+list(APPEND ALL_LIBS lib_common)
+set (ALL_LIBS ${ALL_LIBS} PARENT_SCOPE)

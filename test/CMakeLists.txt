@@ -1,9 +1,3 @@
-list(APPEND ALL_LIBS
-    lib_base
-    lib_common
-    lib_sensor
-)
-
 # 指定要创建可执行文件的 cpp 文件列表
 list(APPEND ALL_TEST_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/test_ImageStitch.cpp
@@ -12,6 +6,7 @@ list(APPEND ALL_TEST_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/test_detailed_stitch.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_highlevel_stitch.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_LocalImage.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_HIKSDK.cpp
 )
 
 # message("ALL_TEST_FILES: ${ALL_TEST_FILES}")

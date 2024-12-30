@@ -15,19 +15,27 @@ find_package(OpenCV REQUIRED)
 ## PLOG
 list(APPEND CMAKE_PREFIX_PATH "F:/ThirdPart/plog")
 find_package(plog REQUIRED)
+## HIK SDK
+include(FindHIKSDK)
 
 # 变量和目录设置
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 list(APPEND ALL_INCLUDE_DIRS
         ${OpenCV_INCLUDE_DIRS}
+        ${HIKSDK_INCLUDE_DIRS}
         F:/ThirdPart/plog/include
 )
 list(APPEND ALL_LIBS
         ${OpenCV_LIBRARIES}
+        ${HIKSDK_LIBRARIES}
 )
 
 
 # 添加子目录
 add_subdirectory(src)
 add_subdirectory(test)
+
+# message("ALL_TEST_FILES: ${ALL_TEST_FILES}")
+# message("ALL_INCLUDE_DIRS: ${ALL_INCLUDE_DIRS}")
+# message("ALL_LIBS: ${ALL_LIBS}")

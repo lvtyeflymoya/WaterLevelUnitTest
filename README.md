@@ -69,6 +69,33 @@ Real-time panoramic video stitching and object tracking
 
 
 
+2.海康相机的SDK怎么添加？
+
+- 它那个文档写的有问题，除了必须添加的`HCNet`和`HCCore`以外，还有这2个库所依赖的那些动态库都得放到`bin`路径下，只不过那些库不用写在`CMakeLists.txt`里面
+- 文档里说HKCom文件夹不能改名，2类库得分开放也是错的。可以把所有`.lib`和`.dll`放在一个目录中，CMake添加那些`.lib`就行了
+
+
+
+3.CMake多个库循环添加，比如我的项目中有动态库A和可执行文件B都依赖了OpenCV，同时B又依赖A，这会造成多次添加OpenCV这个库的问题
+
+- 解决办法：在`target_link_libraries`时，用`PRIVATE`来添加依赖，这样B在添加库A的时候，就不会再添加A依赖的库了
+
+
+
+4.如何把定义在父级CMakeLists里的变量，在子CMakeLists更改并同步
+
+- 如果通过`add_subdirectory`添加了子CMakeLists，在其中虽然可以访问父CMakeLists中的变量，但是修改之后不会同步到父CMakeLists。有时候我们在子CMakeLists新建了个动态库，希望把他同步到全局的动态库列表中，所以就出现了该问题
+- 解决办法：
+
+```cmake
+list(APPEND ALL_LIBS lib_common)		# 先修改变量
+set (ALL_LIBS ${ALL_LIBS} PARENT_SCOPE) # 把变量同步到父CMakeLists中
+```
+
+
+
+
+
 ## 一些疑问
 
 1.多图拼接时，哪张图片为基准图像？

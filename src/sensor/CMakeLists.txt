@@ -13,6 +13,10 @@ PUBLIC
 )
 
 target_link_libraries(lib_sensor 
-PUBLIC 
+PRIVATE 
     ${ALL_LIBS}
 )
+
+# 这里的ALL_LIBS包含了lib_base, lib_common, lib_sensor
+list(APPEND ALL_LIBS lib_sensor)
+set (ALL_LIBS ${ALL_LIBS} PARENT_SCOPE)
