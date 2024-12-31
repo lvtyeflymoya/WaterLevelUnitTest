@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <iostream>
 #include <windows.h>
-#include "HCNetSDK.h"
 #include <time.h>
+#include "HCNetSDK.h"
+#include "opencv2/opencv.hpp"
+
 using namespace std;
 
 typedef HWND(WINAPI *PROCGETCONSOLEWINDOW)();
@@ -54,7 +56,7 @@ HWND CreatePreviewWindow(HINSTANCE hInstance)
         "Preview Window",             // 窗口标题
         WS_OVERLAPPEDWINDOW,          // 窗口样式
         CW_USEDEFAULT, CW_USEDEFAULT, // 初始位置
-        800, 600,                     // 窗口宽高
+        384, 216,                     // 窗口宽高
         NULL,                         // 父窗口句柄
         NULL,                         // 菜单句柄
         hInstance,                    // 实例句柄
@@ -76,8 +78,6 @@ HWND CreatePreviewWindow(HINSTANCE hInstance)
 
 void main()
 {
-
-    //---------------------------------------
     // 初始化
     NET_DVR_Init();
     // 设置连接时间与重连时间
@@ -94,21 +94,19 @@ void main()
     GetConsoleWindowAPI = (PROCGETCONSOLEWINDOW)GetProcAddress(hKernel32, "GetConsoleWindow");
 
     //---------------------------------------
-    // 注册设备
-    LONG lUserID;
-
     // 登录参数，包括设备地址、登录用户、密码等
-    NET_DVR_USER_LOGIN_INFO struLoginInfo = {0};
-    struLoginInfo.bUseAsynLogin = 0;                      // 同步登录方式
-    strcpy(struLoginInfo.sDeviceAddress, "192.168.1.64"); // 设备IP地址
-    struLoginInfo.wPort = 8000;                           // 设备服务端口
-    strcpy(struLoginInfo.sUserName, "admin");             // 设备登录用户名
-    strcpy(struLoginInfo.sPassword, "waterline123456");   // 设备登录密码
+    NET_DVR_USER_LOGIN_INFO loginInfo = {0};
+    loginInfo.bUseAsynLogin = 0;                      // 同步登录方式
+    strcpy(loginInfo.sDeviceAddress, "192.168.1.64"); // 设备IP地址
+    loginInfo.wPort = 8000;                           // 设备服务端口
+    strcpy(loginInfo.sUserName, "admin");             // 设备登录用户名
+    strcpy(loginInfo.sPassword, "waterline123456");   // 设备登录密码
 
     // 设备信息, 输出参数
-    NET_DVR_DEVICEINFO_V40 struDeviceInfoV40 = {0};
+    NET_DVR_DEVICEINFO_V40 deviceInfoV40 = {0};
 
-    lUserID = NET_DVR_Login_V40(&struLoginInfo, &struDeviceInfoV40);
+    // 登录设备
+    LONG lUserID = NET_DVR_Login_V40(&loginInfo, &deviceInfoV40);
     if (lUserID < 0)
     {
         printf("Login failed, error code: %d\n", NET_DVR_GetLastError());
@@ -116,9 +114,7 @@ void main()
         return;
     }
 
-    //---------------------------------------
-    // 启动预览并设置回调数据流
-    LONG lRealPlayHandle;
+    // 预览窗口创建
     HINSTANCE hInstance = GetModuleHandle(NULL); // 获取当前模块句柄
     HWND hWnd = CreatePreviewWindow(hInstance);  // 创建新窗口
     if (hWnd == NULL)
@@ -126,14 +122,17 @@ void main()
         printf("Failed to create preview window\n");
         return;
     }
-    NET_DVR_PREVIEWINFO struPlayInfo = {0};
-    struPlayInfo.hPlayWnd = hWnd;  // 需要SDK解码时句柄设为有效值，仅取流不解码时可设为空
-    struPlayInfo.lChannel = 1;     // 预览通道号
-    struPlayInfo.dwStreamType = 0; // 0-主码流，1-子码流，2-码流3，3-码流4，以此类推
-    struPlayInfo.dwLinkMode = 0;   // 0- TCP方式，1- UDP方式，2- 多播方式，3- RTP方式，4-RTP/RTSP，5-RSTP/HTTP
-    struPlayInfo.bBlocked = 1;     // 0- 非阻塞取流，1- 阻塞取流
 
-    lRealPlayHandle = NET_DVR_RealPlay_V40(lUserID, &struPlayInfo, NULL, NULL);
+    // 码流相关参数设置
+    NET_DVR_PREVIEWINFO playInfo = {0};
+    playInfo.hPlayWnd = hWnd;  // 需要SDK解码时句柄设为有效值，仅取流不解码时可设为空
+    playInfo.lChannel = 1;     // 预览通道号
+    playInfo.dwStreamType = 0; // 0-主码流，1-子码流，2-码流3，3-码流4，以此类推
+    playInfo.dwLinkMode = 0;   // 0- TCP方式，1- UDP方式，2- 多播方式，3- RTP方式，4-RTP/RTSP，5-RSTP/HTTP
+    playInfo.bBlocked = 1;     // 0- 非阻塞取流，1- 阻塞取流
+
+    // 启动预览
+    LONG lRealPlayHandle = NET_DVR_RealPlay_V40(lUserID, &playInfo, NULL, NULL);
     if (lRealPlayHandle < 0)
     {
         printf("NET_DVR_RealPlay_V40 error\n");
@@ -142,6 +141,29 @@ void main()
         return;
     }
 
+    // 设置抓图的格式(必须先开预览)
+    NET_DVR_SetCapturePictureMode(BMP_MODE);
+
+    // 方式1: 非阻塞抓图且直接存成文件
+    //  NET_DVR_CapturePicture(lRealPlayHandle, "./1.bmp");
+
+    // 方式2: 阻塞抓图且数据存放在缓冲区中(刚启动预览可能会失败)
+    DWORD img_buffer_size = 3.4e7; // 足够大就行了
+    char *img_buffer = new char[img_buffer_size];
+    DWORD offset = 0;
+    bool ret = NET_DVR_CapturePictureBlock_New(lRealPlayHandle, img_buffer, img_buffer_size, &offset);
+    if (ret == false)
+    {
+        int error_number = NET_DVR_GetLastError();
+        printf("NET_DVR_CapturePictureBlock_New error, error code: %d\n", error_number);
+    }
+    std::cout << "capture success" << std::endl;
+    std::vector<char> data(img_buffer, img_buffer + offset);
+    cv::Mat img = cv::imdecode(cv::Mat(data), cv::IMREAD_COLOR);
+
+    // 方式3: 阻塞抓图且直接存成文件(第3个参数为超时时间)
+    // NET_DVR_CapturePictureBlock(lRealPlayHandle, "./2.bmp", 1000);
+
     // 消息循环
     MSG msg = {};
     while (GetMessage(&msg, NULL, 0, 0))
@@ -149,7 +171,7 @@ void main()
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    
+
     //---------------------------------------
     // 关闭预览
     NET_DVR_StopRealPlay(lRealPlayHandle);
@@ -157,6 +179,4 @@ void main()
     NET_DVR_Logout(lUserID);
     // 释放SDK资源
     NET_DVR_Cleanup();
-
-    return;
 }

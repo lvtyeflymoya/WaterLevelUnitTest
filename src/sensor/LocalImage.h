@@ -10,5 +10,4 @@ public:
 private:
     virtual void dataCollectionLoop() override;
     std::string dir_path;
-    int capture_interval_ms = 500;
 };

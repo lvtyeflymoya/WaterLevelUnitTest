@@ -2,7 +2,7 @@
 #include <filesystem>
 
 LocalImage::LocalImage(std::string _dir_path, int _queue_max_length, bool _is_full_drop)
-    : ImageSensor(_queue_max_length, _is_full_drop),
+    : ImageSensor(_queue_max_length, 500, _is_full_drop),
       dir_path(_dir_path)
 {
 }
@@ -16,8 +16,8 @@ cv::Mat LocalImage::getData()
         PLOGV << "Blocking wait for new data...";
         cv.wait(lock);
     }
-    cv::Mat img = this->images.front();
-    this->images.pop_front();
+    cv::Mat img = this->images.back();
+    this->images.pop_back();
     return img;
 }
 

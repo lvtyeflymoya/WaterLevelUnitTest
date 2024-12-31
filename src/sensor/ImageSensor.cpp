@@ -1,9 +1,10 @@
 #include "ImageSensor.h"
 
-ImageSensor::ImageSensor(int _queue_max_length, bool _is_full_drop)
+ImageSensor::ImageSensor(int _queue_max_length, int _capture_interval_ms, bool _is_full_drop)
     : queue_max_length(_queue_max_length),
       is_full_drop(_is_full_drop),
-      is_running(false)
+      is_running(false),
+      capture_interval_ms(_capture_interval_ms)
 {
     static plog::ColorConsoleAppender<plog::MyFormatter> consoleAppender;
     plog::init(plog::verbose, &consoleAppender);

@@ -17,10 +17,10 @@
 class ImageSensor
 {
 public:
-    ImageSensor(int _queue_max_length, bool _is_full_drop);
+    ImageSensor(int _queue_max_length, int _capture_interval_ms, bool _is_full_drop);
     ~ImageSensor();
-    void start();
-    void stop();
+    virtual void start();
+    virtual void stop();
     void clear();
     void enqueueData(const cv::Mat& img);
     virtual cv::Mat getData() = 0;
@@ -34,4 +34,5 @@ protected:
     std::mutex mutex;
     std::condition_variable cv;
     std::thread sensor_thread;
+    int capture_interval_ms;
 };
