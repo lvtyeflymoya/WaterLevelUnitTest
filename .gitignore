@@ -36,3 +36,7 @@
 /.vscode
 /results
 /datasets
+
+*.trt
+*.onnx
+*.engine

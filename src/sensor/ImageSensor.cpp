@@ -46,8 +46,10 @@ void ImageSensor::clear()
     }
 }
 
+// 将图像数据（cv::Mat类型的img）加入到图像队列中。
 void ImageSensor::enqueueData(const cv::Mat &img)
 {
+
     std::unique_lock<std::mutex> lock(mutex);
     if (images.size() >= queue_max_length)
     {

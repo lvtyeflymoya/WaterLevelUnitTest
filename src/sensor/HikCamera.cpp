@@ -12,7 +12,7 @@ HikCamera::HikCamera(int _queue_max_length, bool _is_full_drop, HWND _preview_ha
     assert(previewHandler != nullptr);
 }
 
-// 取出最新的一帧返回
+// 从队列尾部读取出一帧数据
 cv::Mat HikCamera::getData()
 {
     std::unique_lock<std::mutex> lock(mutex);
@@ -21,8 +21,8 @@ cv::Mat HikCamera::getData()
         PLOGV << "Blocking wait for new data...";
         cv.wait(lock);
     }
-    cv::Mat img = this->images.front();
-    this->images.pop_front();
+    cv::Mat img = this->images.back();
+    this->images.pop_back();
     return img;
 }
 
@@ -47,7 +47,7 @@ void HikCamera::dataCollectionLoop()
 
     while (this->is_running)
     {
-        DWORD img_buffer_size = 3000 * 4000 * 3; // 足够大就行了
+        constexpr DWORD img_buffer_size = 3000 * 4000 * 3; // 足够大就行了
         std::vector<char> img_buffer(img_buffer_size);
         DWORD offset = 0;
         bool ret = NET_DVR_CapturePictureBlock_New(this->replayHandler, img_buffer.data(), img_buffer_size, &offset);

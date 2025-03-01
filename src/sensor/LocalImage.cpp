@@ -16,8 +16,8 @@ cv::Mat LocalImage::getData()
         PLOGV << "Blocking wait for new data...";
         cv.wait(lock);
     }
-    cv::Mat img = this->images.back();
-    this->images.pop_back();
+    cv::Mat img = this->images.front();
+    this->images.pop_front();
     return img;
 }
 

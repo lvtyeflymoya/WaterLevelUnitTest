@@ -9,7 +9,7 @@ int main()
 
     PLOGI << "System initialized";
 
-    LocalImage localImage("F:/MasterGraduate/03-Code/PanoramicTracking/datasets/images/data4",
+    LocalImage localImage("D:/ImageAnnotation/chuanzha/Fabricate",
                           10, false);
     localImage.start();
 

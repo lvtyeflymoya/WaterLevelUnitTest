@@ -5,7 +5,7 @@ Real-time panoramic video stitching and object tracking
 
 - [x] 完善`base`库，加入线程安全的队列等常用的数据结构
 - [x] 完善`log`库，对于每次运行的结果，不要用`imshow`，而是根据运行时间创个文件夹，把所有中间结果以图片的形式保存下来
-- [ ] 学习常用的图像融合算法
+- [x] 学习常用的图像融合算法
   - [x] 加权融合
   - [x] 羽化融合
   - [x] 最佳拼接缝融合
@@ -15,8 +15,11 @@ Real-time panoramic video stitching and object tracking
 - [ ] 弄明白Wave Correct、Bundle Adjustment的原理
 - [ ] 仔细看一下`cv::detail`里的各个拼接模块怎么用，能够做到自由地组合并添加新的算法进去
 - [x] 试一下kaggle、colab、aistudio之类的免费云服务器
-- [ ] 找出图像拼接近几年的所有顶刊顶会论文
-- [ ] **开发图像采集模块**
+- [ ] **找出图像拼接、单应估计领域近几年的所有顶刊顶会论文阅读**
+- [x] 开发图像采集模块
+- [x] 学习DLT、Tensor DLT、STN(空间变换层)等基础知识（可以看下硕士毕业论文）
+- [ ] 了解下SFM、光流法（看到很多单应估计领域的模型用到了这些东西）
+- [x] Pytorch复习
 
 
 
@@ -57,6 +60,16 @@ Real-time panoramic video stitching and object tracking
 3.用基于深度学习的image warping（比如单应性估计）替代基于特征点的方法
 
 4.结合语义分割技术，用以确定特征点搜索的ROI，从而减少前景的影响
+
+5.针对低重叠率的输入图片，设计个找重叠区域的mask模块，以mask的形式滤除重叠区之外的部分，然后将仅将重叠部分输入单应估计模块，这个模块主要就解决“误对齐”问题，不是没对好有鬼影，而是完全对齐错东西了
+
+6.将现有的模块改成级联的形式
+
+7.参考Content-Aware...那篇论文，设计一个模块能生成一个Mask来获得主导拼接的平面，同时滤掉低纹理、运动、低照度的物体
+
+8.参考20年和21年2篇图像拼接的论文，搞个内容矫正模块，不过这个模块貌似只能用用合成的数据集来监督学习，没法无监督学习
+
+9.微调视觉大模型backbone比如Vit、DINOv2代替CNN进行单应估计
 
 
 
@@ -175,6 +188,57 @@ set (ALL_LIBS ${ALL_LIBS} PARENT_SCOPE) # 把变量同步到父CMakeLists中
 
 
 
+10.怎么设计损失函数？
+
+- 这个问题应该是模型设计的最关键的问题了，当我们验证一个idea有没有用的时候，模型本身其实初期可以没必要搞那么复杂，随便搞个VGG就可以了，这个时候可能最主要的是验证我们设计的损失到底work不。
+
+- 回到损失函数如何设计，如果我们现在是把一个传统的问题用深度学习来做，那么首先可以看看传统问题本身是不是用**优化**的思路来做的，如果是的话，就可以参考传统优化问题中的**能量函数**是针对什么进行约束的，直接对照这些能量函数的目的，来设计损失函数。比如图像矩形化，传统方法的能量函数包括对直线的约束、边界的约束、形状的约束，那我用深度学习的损失函数可以也包含这几个约束项，但是计算公式可能就需要重新设计
+
+- 设计损失函数的难度不是公式用什么，而是对什么进行约束，一定要先想好目的（对什么东西进行约束），然后再设计。
+
+  比如进行单应估计时，我们可以对以下内容进行约束：
+
+  - 用估计的H进行warp后的角点和GT Hwarp后的角点尽可能保持一致：那么就可以用角点偏移的L2范数作为损失函数。
+  - warp后target image和reference image在重叠区的内容更加一致：那么就可以用像素的差值L1范数来做损失函数...
+
+> 对同一个目的（约束）我们有不同的实现形式，比如内容的一致性约束，我们可以用像素L1范数来作为损失函数，也可以用某层feature map的L1范数来作为损失函数。所以，如果要以损失函数作为闯进点的话，有以下2个思路：
+>
+> - 设计个新的约束项
+> - 对已有约束项提出一种新的、更有效的表达式
+
+- 设计的损失函数如果有多个约束项，要注意各项的权重，一直加入正则化
+
+
+
+11.什么是image warp，他和单应变换有啥关系 ？
+
+- image warp就是对一副图像进行一些变换，单应矩阵是图像拼接领域最场景的一个warp方法，除此之外，还有许多warp model，比如基于mesh、optical flow、thin plate spline...
+
+
+
+12.合成数据集和真实数据集的最大的区别是什么？
+
+- 合成数据集即使对其中一张图片做了单应变换，拍摄2张图片的相机光心还是一致的，所以是没有视差（Parallax）的。但是实际真实数据中很多图片对是存在视差的
+
+
+
+13.什么是cost volume？
+
+cost volume的中文是**代价张量**，它是一个多维数据结构，用来描述输入的2幅图像的像素之间的匹配代价。常用于立体匹配、光流估计、深度估计等任务中。
+
+- cost volume的维度通常是(H, W, D). 其中H、W表示输入图片的宽、高，D表示计算匹配代价的像素点的范围。我们计算通常不仅仅计算图1某像素点(x,y)与在图2相同位置(x,y)的像素的相似度，还会计算与图2的(x,y)点周围像素的相似度，比如VFISNet中，会计算图2中对应位置像素点以r为半径的圆内的所有像素。
+- 匹配代价其实就是相似度，一般用向量的点积、L1范数、互相关等操作计算，也可用神经网络直接预测
+
+
+
+14.cost volume或者21年那篇论文提出的Contexual Correlation Layer怎么用？
+
+- 用于将reference image和target image的特征进行融合。之前的特征融合可能就是个concatenate操作，直接替代掉就好
+
+
+
+
+
 ## 参考
 
 - [duchengyao/gpu-based-image-stitching: A simple version of "GPU based parallel optimization for real time panoramic video stitching".](https://github.com/duchengyao/gpu-based-image-stitching)
@@ -182,4 +246,7 @@ set (ALL_LIBS ${ALL_LIBS} PARENT_SCOPE) # 把变量同步到父CMakeLists中
 - https://www.bilibili.com/video/BV1ri4y1s72t
 - [AutoStitch笔记1 - 知乎](https://zhuanlan.zhihu.com/p/56633416)
 - [文献汇总1](https://github.com/DoongLi/awesome-homography-estimation-and-image-alignment)
-- [文献汇总2](https://github.com/MelodYanglc/Survey)
+- [文献汇总2(来自综述论文)](https://github.com/MelodYanglc/Survey)
+- [图像拼接论文、数据集汇总-CSDN博客](https://blog.csdn.net/qq_36584673/article/details/134711352)
+- https://ppwwyyxx.com/blog/2016/How-to-Write-a-Panorama-Stitcher
+- [深度学习版图像拼接_Seung-Yim Yau的博客-CSDN博客](https://blog.csdn.net/miracle0_0/category_7526176.html)

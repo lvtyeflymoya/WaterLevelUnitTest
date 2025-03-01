@@ -2,8 +2,8 @@ $current_time = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 $output_file = "./results/test_detailed_stitch/$current_time.jpg"
 
 ./bin/test_detailed_stitch.exe `
-./datasets/images/data4/1.jpg `
-./datasets/images/data4/2.jpg `
+F:/MasterGraduate/03-Code/PanoramicTracking/datasets/images/data5/3.jpg `
+F:/MasterGraduate/03-Code/PanoramicTracking/datasets/images/data5/4.jpg `
 --output $output_file `
 --try_cuda yes `
 --work_megapix 0.6 `
@@ -29,6 +29,14 @@ $output_file = "./results/test_detailed_stitch/$current_time.jpg"
 
 # --timelapse as_is `
 # --preview `
+
+# F:/MasterGraduate/03-Code/PanoramicTracking/datasets/images/data5/1.jpg `
+# F:/MasterGraduate/03-Code/PanoramicTracking/datasets/images/data5/2.jpg `
+# F:/MasterGraduate/03-Code/PanoramicTracking/datasets/images/data5/3.jpg `
+# F:/MasterGraduate/03-Code/PanoramicTracking/datasets/images/data5/4.jpg `
+# F:/MasterGraduate/03-Code/PanoramicTracking/datasets/images/data5/5.jpg `
+
+# ./datasets/images/data4/9.jpg `
 
 <#
 Flags:
