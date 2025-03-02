@@ -27,6 +27,7 @@ cv::Mat SegmentationInference::do_inference(cv::Mat& input_image)
 
     //后处理
     cv::Mat output(input_h, input_w, CV_8UC3, cv::Scalar(0, 0, 0));
+    int sum = 0;
     for (int row = 0; row < input_h; row++)
     {
         for (int col = 0; col < input_w; col++)
@@ -39,6 +40,7 @@ cv::Mat SegmentationInference::do_inference(cv::Mat& input_image)
                 if (prob[basic_pos] > max_number)   //对图像中的每一个像素点取分类置信度最高的一类作为最终结果
                 {
                     max_number = prob[basic_pos];
+                    sum += prob[basic_pos];
                     max_idx = cls;
                 }
             }
@@ -48,5 +50,7 @@ cv::Mat SegmentationInference::do_inference(cv::Mat& input_image)
             output.at<cv::Vec3b>(row, col)[2] = color_list[max_idx][0];	//R
         }
     }
+    
+
     return output;
 }

@@ -33,6 +33,7 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 list(APPEND ALL_INCLUDE_DIRS
         ${OpenCV_INCLUDE_DIRS}
+        ${CUDA_INCLUDE_DIRS}
         D:/ThirdPart/plog/include
         ${TRT_DIR}/include
 )

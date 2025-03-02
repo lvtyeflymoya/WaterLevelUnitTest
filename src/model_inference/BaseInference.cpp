@@ -143,24 +143,31 @@ void BaseInference::model_inference(cv::Mat &src_img)
         // 分配输入和输出内存
         void* inputBuffer;
         void* outputBuffer;
-        cudaMalloc(&inputBuffer, 3 * input_shape.height * input_shape.width * sizeof(float));
-        cudaMalloc(&outputBuffer, output_size * sizeof(float));
+        CHECK(cudaMalloc(&inputBuffer, 3 * input_shape.height * input_shape.width * sizeof(float)));
+        CHECK(cudaMalloc(&outputBuffer, output_size * sizeof(float)));
+        
+
 
         // 设置张量地址
-        context->setTensorAddress("input", inputBuffer);
-        context->setTensorAddress("output", outputBuffer);
+        context->setTensorAddress(input_blob_name, inputBuffer);
+        context->setTensorAddress(output_blob_name, outputBuffer);
 
         // 启动推理
         cudaStream_t stream;
-        cudaStreamCreate(&stream);
+        CHECK(cudaStreamCreate(&stream));
+        // 将输入数据拷贝到GPU内存
+        CHECK(cudaMemcpyAsync(inputBuffer, blob, 3 * input_shape.height * input_shape.width * sizeof(float), cudaMemcpyHostToDevice, stream));
         context->enqueueV3(stream);
+         // 将推理结果拷贝回CPU内存
+        CHECK(cudaMemcpyAsync(prob, outputBuffer, output_size * sizeof(float), cudaMemcpyDeviceToHost, stream));
 
         // 同步流以确保推理完成
         cudaStreamSynchronize(stream);
 
         // 释放内存
-        cudaFree(inputBuffer);
-        cudaFree(outputBuffer);
+        cudaStreamDestroy(stream);
+        CHECK(cudaFree(inputBuffer));
+        CHECK(cudaFree(outputBuffer));
     #else
         void *buffers[2];
         // In order to bind the buffers, we need to know the names of the input and output tensors.
@@ -181,11 +188,7 @@ void BaseInference::model_inference(cv::Mat &src_img)
 
         // DMA input batch data to device, infer on the batch asynchronously, and DMA output back to host
         CHECK(cudaMemcpyAsync(buffers[inputIndex], blob, 3 * input_shape.height * input_shape.width * sizeof(float), cudaMemcpyHostToDevice, stream)); // 将输入blob异步从内存拷贝到显存
-        #ifdef TRT_10
-            context->enqueueV3(stream);
-        #else
-            context->enqueueV2(buffers, stream, nullptr);
-        #endif
+        context->enqueueV2(buffers, stream, nullptr);
         CHECK(cudaMemcpyAsync(prob, buffers[outputIndex], output_size * sizeof(float), cudaMemcpyDeviceToHost, stream)); // 将输出prob异步从显存拷贝到内存
         cudaStreamSynchronize(stream);
 
