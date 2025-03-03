@@ -4,23 +4,9 @@
 /*  包含裁剪ROI区域、提取粗检测水位线邻域、水位线拟合等功能  */
 /***************************************************/
 
-#include "water_level_process.h"
+#include "water_level_process_new.h"
 
-/**
- * @brief crop_ROI 裁剪水位图像ROI区域
- * @param src 水位图像
- * @param position  闸室位置，用于获取不同的裁剪区域
- */
-void crop_ROI(cv::Mat& src, QString position)
-{
-    WaterlevelCameraParam* param = Config::get_instance()->get_waterlevel_param(position);  //获取水位相机参数
 
-    int x1 = param->x1;
-    int y1 = param->y1;
-    int x2 = x1 + param->w;
-    int y2 = y1 + param->h;
-    src = src(cv::Rect(cv::Point2d(x1, y1), cv::Point2d(x2, y2)));  //裁剪图像
-}
 
 /**
  * @brief get_waterline_position 由粗检测掩膜图获取裁剪区域的左上角y坐标
@@ -111,7 +97,7 @@ int get_waterline_position(cv::Mat& rough_output)
  * @param pos 闸室位置，用于获取不同的水位线固定斜率
  * @return 水位线直线方程参数ax+by+c=0
  */
-vector<double> fitting_waterline(cv::Mat& fine_output, int left_up_y_in_src, QString pos)
+vector<double> fitting_waterline(cv::Mat& fine_output, int left_up_y_in_src, string pos)
 {
     /************由分割得到的掩膜图包含三类，BGR像素值分别为闸室墙(0,0,0)，水体(0,0,128)，船舶(0,128,0)，对图像的R通道除以128，方便提取闸室墙与水体的边界***************/
     cv::Mat convert;
@@ -165,17 +151,23 @@ vector<double> fitting_waterline(cv::Mat& fine_output, int left_up_y_in_src, QSt
  * @param c
  * @param position 闸室位置，用于获取不同的水位线固定斜率
  */
-void fitLineWithConstant_k(vector<cv::Point2d> ptSet, double &a, double &b, double &c, QString position)
+void fitLineWithConstant_k(vector<cv::Point2d> ptSet, double &a, double &b, double &c, string position)
 {
     int N = ptSet.size();
     double residual_error = 3; //内点阈值
 
-    WaterlevelCameraParam* param = Config::get_instance()->get_waterlevel_param(position);  //获取水位相机参数
-    a = param->constant_a;  //取水位线固定斜率
-    b = param->constant_b;
+    // WaterlevelCameraParam* param = Config::get_instance()->get_waterlevel_param(position);  //获取水位相机参数
+    // a = param->constant_a;  //取水位线固定斜率
+    // b = param->constant_b;
+
+    a = 0.5;
+    b = 0.5;
 
     srand((unsigned)time(NULL));
-    random_shuffle(ptSet.begin(), ptSet.end());
+    // 初始化随机数生成器
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    std::shuffle(ptSet.begin(), ptSet.end(), rng);
     int inlier_count = 0;
     for(int n = 0; n < N; n++)
     {
@@ -379,4 +371,5 @@ double uniformRandom(void)
 {
     return (double)rand() / (double)RAND_MAX;
 }
+
 

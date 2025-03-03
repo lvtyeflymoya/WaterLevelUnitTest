@@ -6,7 +6,7 @@
 #include "Utils/blockingconcurrentqueue.h"
 
 #include "model_inference/SegmentationInference.h"
-#include "water_level_process.h"
+#include "water_level_process_new.h"
 
 using namespace moodycamel;
 

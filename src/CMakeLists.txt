@@ -5,7 +5,9 @@ add_executable(${PROJECT_NAME}
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/base)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/common)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sensor)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/image_process)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/model_inference)
+
 
 
 set (ALL_LIBS ${ALL_LIBS} PARENT_SCOPE)

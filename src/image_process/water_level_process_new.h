@@ -1,20 +1,18 @@
 #include <iostream>
-#include <QString>
 #include <opencv2/opencv.hpp>
-#include "config/Config.h"
+#include <numeric>
+#include <algorithm>
+#include <random>
 
 using namespace std;
 
 
-void crop_ROI(cv::Mat& src, QString position);  //裁剪水位图像ROI区域
-
 int get_waterline_position(cv::Mat& rough_output);      //由粗检测掩膜图获取裁剪区域的左上角y坐标
-
-vector<double> fitting_waterline(cv::Mat& fine_output, int left_up_y_in_src, QString pos);      //水位线拟合
-
+vector<double> fitting_waterline(cv::Mat& fine_output, int left_up_y_in_src, string pos);      //水位线拟合
 
 
-void fitLineWithConstant_k(vector<cv::Point2d> ptSet, double &a, double &b, double &c, QString position);   //固定斜率拟合
+
+void fitLineWithConstant_k(vector<cv::Point2d> ptSet, double &a, double &b, double &c, string position);   //固定斜率拟合
 
 void fitLineRANSAC(vector<cv::Point2d> ptSet, double &a, double &b, double &c, vector<bool> &inlierFlag);   //RANSAC直线拟合
 

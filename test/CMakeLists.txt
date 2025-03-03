@@ -7,6 +7,7 @@ list(APPEND ALL_TEST_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/test_highlevel_stitch.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_LocalImage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/test_inference.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_folder.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/test_HIKSDK.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/test_HikCamera.cpp
 )
