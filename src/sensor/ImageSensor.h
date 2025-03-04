@@ -23,6 +23,7 @@ public:
     virtual void stop();
     void clear();
     void enqueueData(const cv::Mat& img);
+    bool isRunning() const { return is_running.load(); } 
     virtual cv::Mat getData() = 0;
 protected:
     virtual void dataCollectionLoop() = 0;

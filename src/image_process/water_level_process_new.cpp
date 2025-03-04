@@ -160,8 +160,8 @@ void fitLineWithConstant_k(vector<cv::Point2d> ptSet, double &a, double &b, doub
     // a = param->constant_a;  //取水位线固定斜率
     // b = param->constant_b;
 
-    a = 0.5;
-    b = 0.5;
+    a = 0.1;
+    b = 0.1;
 
     srand((unsigned)time(NULL));
     // 初始化随机数生成器

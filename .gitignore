@@ -36,6 +36,7 @@
 /.vscode
 /results
 /datasets
+/onnx_tensorRT
 
 *.trt
 *.onnx

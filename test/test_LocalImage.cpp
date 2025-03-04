@@ -9,13 +9,16 @@ int main()
 
     PLOGI << "System initialized";
 
+    // LocalImage localImage("D:/ImageAnnotation/chuanzha/Fabricate/306.jpg",
+    //                       10, false);
     LocalImage localImage("D:/ImageAnnotation/chuanzha/Fabricate",
-                          10, false);
+        10, false);
     localImage.start();
 
     while (1)
     {
         cv::imshow("LocalImage", localImage.getData());
         cv::waitKey(100);
+
     }
 }

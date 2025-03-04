@@ -1,27 +1,26 @@
 #include "SingleImageInference.h"
 
 
-SingleImageInference::SingleImageInference(std::string file_path, int _queue_max_length, bool _is_full_drop)
-: ImageSensor(_queue_max_length, 500, _is_full_drop)
+SingleImageInference::SingleImageInference()
 {
-    this->waterlevel_inference_rough = new SegmentationInference("D:/Cpp_Project/PanoramicTracking/onnxANDtensorRT/earlierModelFile/rough_waternet.engine", 512, 512, 3); // 水位线粗检测
-    this->waterlevel_inference_fine = new SegmentationInference("D:/Cpp_Project/PanoramicTracking/onnxANDtensorRT/rough_waternet.engine", 2160, 256, 3);  // 水位线精检测
-    this->m_file_path = file_path;
+    this->waterlevel_inference_rough = make_unique<SegmentationInference>("D:/Cpp_Project/PanoramicTracking/onnx_tensorRT/earlierModelFile/rough_waternet.engine", 512, 512, 3); // 水位线粗检测
+    this->waterlevel_inference_fine = make_unique<SegmentationInference>("D:/Cpp_Project/PanoramicTracking/onnx_tensorRT/rough_waternet.engine", 2160, 256, 3);  // 水位线精检测
 }
 
+SingleImageInference::~SingleImageInference(){};
 
-SingleImageInference::~SingleImageInference()
-{
-    delete waterlevel_inference_rough;
-    delete waterlevel_inference_fine;
-}
+// SingleImageInference::~SingleImageInference()
+// {
+//     delete waterlevel_inference_rough;
+//     delete waterlevel_inference_fine;
+// }
 
-void SingleImageInference::inference()
+void SingleImageInference::inference(const cv::Mat& input_image)
 {
-    cv::Mat img = cv::imread(this->m_file_path);
-    this->enqueueData(img);
+    // 保留原始图像的副本用于可视化
+    this->original_image = input_image.clone();
     cv::Mat img_resize;
-    cv::resize(img, img_resize, cv::Size(512, 512), cv::INTER_AREA);
+    cv::resize(this->original_image, img_resize, cv::Size(512, 512), cv::INTER_AREA);
 
     // 取图像对角线上的512个像素点，三通道值均相同时为红外夜间模式
     int num_night = 0;
@@ -37,22 +36,20 @@ void SingleImageInference::inference()
     if (num_night != 512)
     {
         // 粗检测
-        cv::Mat rough_output = waterlevel_inference_rough->do_inference(img_resize);
-        this->enqueueData(rough_output);
-        int left_up_y = get_waterline_position(rough_output);
-        int left_up_y_in_img = (int)(left_up_y / 521.0 * img.rows);
+        this->rough_result = waterlevel_inference_rough->do_inference(img_resize);
+        int left_up_y = get_waterline_position(this->rough_result);
+        int left_up_y_in_img = (int)(left_up_y / 521.0 * this->original_image.rows);
+        rough_detected = (left_up_y != 0);
         // 能在图像中找到粗检测水位线邻域时，进一步进行精检测
-        if (left_up_y != 0)
+        if (rough_detected)
         {
             // 精检测
-            cv::Mat edge = img(cv::Rect(cv::Point2d(0, left_up_y_in_img), cv::Point2d(img.cols, min(left_up_y_in_img + 256, img.rows)))); // 根据原图像中的左上角y坐标裁剪邻域图像
-            cv::Mat fine_output = waterlevel_inference_fine->do_inference(edge);    // 精检测模型推理
-            this->enqueueData(fine_output);
+            cv::Mat edge = this->original_image(cv::Rect(cv::Point2d(0, left_up_y_in_img), cv::Point2d(this->original_image.cols, min(left_up_y_in_img + 256, this->original_image.rows)))); // 根据原图像中的左上角y坐标裁剪邻域图像
+            this->fine_result = waterlevel_inference_fine->do_inference(edge);    // 精检测模型推理
 
-            vector<double> line_equation = fitting_waterline(fine_output, left_up_y_in_img, "inside");
-            cv::Mat waterline_output = img;
-            draw_waterlevel(waterline_output, line_equation);
-            this->enqueueData(waterline_output);
+            vector<double> line_equation = fitting_waterline(this->fine_result, left_up_y_in_img, "inside");
+            this->waterlevel_image = this->original_image.clone();
+            draw_waterlevel(this->waterlevel_image, line_equation);
         }
     }
 }
@@ -71,37 +68,25 @@ void SingleImageInference::draw_waterlevel(cv::Mat& img, vector<double> line_equ
     cv::line(img, ptStart, ptEnd, cv::Scalar(0, 0, 255), line_width, 8); // 画线
 }
 
-void SingleImageInference::dataCollectionLoop(){}
 
-cv::Mat SingleImageInference::getData()
+void SingleImageInference::save_image(const string& base_path)
 {
-    std::unique_lock<std::mutex> lock(mutex);
-    if (this->images.empty())
-    {
-        PLOGV << "Blocking wait for new data...";
-        cv.wait(lock);
-    }
-    cv::Mat img = this->images.front();
-    this->images.pop_front();
-    return img;
-}
-
-void SingleImageInference::save_image(string base_path)
-{
-    vector<string> filenames = 
-    {
-        "_original.jpg",
-        "_inference_rough_result.jpg",
-        "_inference_fine_result.jpg",
-        "_waterline_display_result.jpg"
+    vector<pair<cv::Mat, string>> save_list = {
+        {original_image, "_original.jpg"},
+        {rough_result,   "_inference_rough_result.jpg"}
     };
-    int num = this-> images.size();
-    for (size_t i = 0; i < num; i++) 
-    {
-        string full_path = base_path + filenames[i];
-        bool success = imwrite(full_path, this->images.front());
-        this->images.pop_front();
-    
-        cout << "已保存: " << full_path << endl;
+
+    // 仅当粗检测成功时保存精检图和水位线图
+    if (rough_detected) {
+        save_list.emplace_back(fine_result,      "_inference_fine_result.jpg");
+        save_list.emplace_back(waterlevel_image, "_waterline_display_result.jpg");
+    }
+
+    for (const auto& [img, suffix] : save_list) {
+        if (!img.empty()) {
+            string full_path = base_path + suffix;
+            bool success = imwrite(full_path, img);
+            cout << (success ? "已保存: " : "保存失败: ") << full_path << endl;
+        }
     }
 }

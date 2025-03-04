@@ -1,46 +1,59 @@
-// 读取文件夹所有图片进行推理和水位线计算，并保存可视化结果
 #include "SingleImageInference.h"
 #include "LocalImage.h"
-
-#include <iostream>
 #include <filesystem>
-#include <vector>
-#include <string>
-namespace fs = std::filesystem;
+#include <unordered_set>
 
-static bool ends_with(const std::string &str, const std::string &suffix)
-{
-    if (str.size() < suffix.size())
-        return false;
-    return str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
-}
+namespace fs = std::filesystem;
 
 int main()
 {
-    // auto localImage("D:/ImageAnnotation/chuanzha/Fabricate",10, false);
-    // localImage.start(); // 将图像读取到队列中
+    cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_SILENT);
 
-    std::string folderPath = "D:/ImageAnnotation/chuanzha/Fabricate"; 
-    std::string outputFolder = folderPath + "/results"; // 输出目录
-    if (!fs::exists(outputFolder)) {
-        fs::create_directories(outputFolder);
-    }
-    // 遍历文件夹
-    for (const auto &entry : fs::directory_iterator(folderPath))
-    {
-        if (fs::is_regular_file(entry))
-        {
-            std::string file_path = entry.path().string();
-            std::string file_name = entry.path().stem().string();
-            if (ends_with(file_path, ".jpg") || ends_with(file_path, ".png"))
-            {
-                SingleImageInference signal_image_inference(file_path, 50, false);
-                signal_image_inference.inference();
-                size_t lastdot = file_path.find_last_of(".");
-                std::string output_basepath = outputFolder + '/' + file_name;
-                signal_image_inference.save_image(output_basepath);
+    const string input_folder = "D:/ImageAnnotation/chuanzha/Fabricate";
+    const string output_folder = "D:/ImageAnnotation/chuanzha/Fabricate/results";
+    
+    // 统计输入目录下的图片数量
+    int imageCount = 0;
+    const std::unordered_set<std::string> imageExts{".jpg", ".jpeg", ".png"};
+    for (const auto& entry : fs::directory_iterator(input_folder)) {
+        if (entry.is_regular_file()) {
+            std::string ext = entry.path().extension().string();
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+            
+            if (imageExts.count(ext)) {
+                ++imageCount;
             }
         }
     }
 
+    // 创建输出目录
+    if (!fs::exists(output_folder)) {
+        fs::create_directories(output_folder);
+    }
+
+    LocalImage image_reader(input_folder, 50, false);
+    image_reader.start();
+
+    // 持续读取直到完成
+    int idx = 0;
+    while(image_reader.isRunning()) 
+    {
+        cv::Mat src_img = image_reader.getData();
+
+        SingleImageInference processor;
+        processor.inference(src_img);
+
+        // 构造包含原文件名的保存路径
+        string base_name = std::to_string(idx++) + ".jpg";
+        string save_path = output_folder + "/" + base_name;
+
+        // 保存四张结果图
+        processor.save_image(save_path);
+        if(idx > (imageCount - 1)){
+            break;
+        }
+    }
+
+    cout << "全部图片处理完成！" << endl;
+    return 0;
 }
