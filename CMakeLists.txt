@@ -14,7 +14,7 @@ include(Function)
 list(APPEND CMAKE_PREFIX_PATH "D:/apps/Opencv/opencv/build")
 find_package(OpenCV REQUIRED)
 
-# PLOG
+## PLOG
 list(APPEND CMAKE_PREFIX_PATH "D:/ThirdPart/plog")
 find_package(plog REQUIRED)
 
@@ -22,10 +22,12 @@ find_package(plog REQUIRED)
 find_package(CUDA REQUIRED)
 message("CUDA_LIBRARY_DIRS: ${CUDA_LIBRARY_DIRS}")
 
-# TensorRT
+## TensorRT
 set(TRT_DIR "D:/ThirdPart/TensorRT-10.8.0.43")
-
 link_directories(${TRT_DIR}/lib)
+
+## cereal
+set(CEREAL_DIR "D:/ThirdPart/cereal")
 
 # 设置可执行文件和动态库文件的输出目录
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
@@ -36,6 +38,7 @@ list(APPEND ALL_INCLUDE_DIRS
         ${CUDA_INCLUDE_DIRS}
         D:/ThirdPart/plog/include
         ${TRT_DIR}/include
+        ${CEREAL_DIR}/include
 )
 
 

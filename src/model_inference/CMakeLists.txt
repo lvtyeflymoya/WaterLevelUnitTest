@@ -3,6 +3,7 @@ SHARED
     ${CMAKE_CURRENT_SOURCE_DIR}/BaseInference.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SegmentationInference.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SingleImageInference.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/WaterLevelPrediction.cpp
 )
 
 target_include_directories(lib_model_inference

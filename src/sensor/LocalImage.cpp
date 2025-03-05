@@ -38,25 +38,25 @@ void LocalImage::dataCollectionLoop()
     }
 
     // 循环遍历dir_path目录下的所有文件
-    while (this->is_running)
+    for (const auto &entry : std::filesystem::directory_iterator(dir_path))
     {
-        for (const auto &entry : std::filesystem::directory_iterator(dir_path))
-        {
-            if (entry.is_regular_file())
-            {
-                std::string file_path = entry.path().string();
-
-                // 检查文件扩展名是否是图像文件
-                if (ends_with(file_path, ".jpg") ||
-                    ends_with(file_path, ".png") ||
-                    ends_with(file_path, ".bmp"))
-                {
-                    cv::Mat img = cv::imread(file_path);
-                    this->enqueueData(img);
-                }
-            }
-            std::this_thread::sleep_for(
-                std::chrono::milliseconds(this->capture_interval_ms));
+        if (!this->is_running){
+            break;
         }
+        if (entry.is_regular_file())
+        {
+            std::string file_path = entry.path().string();
+
+            // 检查文件扩展名是否是图像文件
+            if (ends_with(file_path, ".jpg") ||
+                ends_with(file_path, ".png") ||
+                ends_with(file_path, ".bmp"))
+            {
+                cv::Mat img = cv::imread(file_path);
+                this->enqueueData(img);
+            }
+        }
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(this->capture_interval_ms));
     }
 }

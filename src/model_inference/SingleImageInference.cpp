@@ -5,6 +5,7 @@ SingleImageInference::SingleImageInference()
 {
     this->waterlevel_inference_rough = make_unique<SegmentationInference>("D:/Cpp_Project/PanoramicTracking/onnx_tensorRT/earlierModelFile/rough_waternet.engine", 512, 512, 3); // 水位线粗检测
     this->waterlevel_inference_fine = make_unique<SegmentationInference>("D:/Cpp_Project/PanoramicTracking/onnx_tensorRT/rough_waternet.engine", 2160, 256, 3);  // 水位线精检测
+    this->waterLine_equation = vector<double>(3, 0);
 }
 
 SingleImageInference::~SingleImageInference(){};
@@ -48,6 +49,7 @@ void SingleImageInference::inference(const cv::Mat& input_image)
             this->fine_result = waterlevel_inference_fine->do_inference(edge);    // 精检测模型推理
 
             vector<double> line_equation = fitting_waterline(this->fine_result, left_up_y_in_img, "inside");
+            this->waterLine_equation = line_equation;
             this->waterlevel_image = this->original_image.clone();
             draw_waterlevel(this->waterlevel_image, line_equation);
         }
@@ -56,7 +58,7 @@ void SingleImageInference::inference(const cv::Mat& input_image)
 
 
 // 在原图上绘制水位线
-void SingleImageInference::draw_waterlevel(cv::Mat& img, vector<double> line_equation)
+void SingleImageInference::draw_waterlevel(cv::Mat& img, std::vector<double> line_equation)
 {
     double A = line_equation[0], B = line_equation[1], C = line_equation[2];
     cv::Point2d ptStart, ptEnd; // 水位线的起始点和终止点
@@ -69,7 +71,7 @@ void SingleImageInference::draw_waterlevel(cv::Mat& img, vector<double> line_equ
 }
 
 
-void SingleImageInference::save_image(const string& base_path)
+void SingleImageInference::save_image(const std::string& base_path)
 {
     vector<pair<cv::Mat, string>> save_list = {
         {original_image, "_original.jpg"},
@@ -90,3 +92,69 @@ void SingleImageInference::save_image(const string& base_path)
         }
     }
 }
+
+// 计算水位线位置
+double SingleImageInference::calculateWaterLine()
+{
+    double A = this->waterLine_equation[0], B = this->waterLine_equation[1], C = this->waterLine_equation[2];
+    //  当a,b,c均为0时，未检测到水位线，返回-1
+    if (A == 0 && B == 0 && C == 0)
+    {
+        return -1;
+    }
+    // else
+    // {
+    //     return -(A * 100 + C) / B;
+    // }
+
+    std::vector<std::pair<double, double>> inside_pairs = {
+        {8, 181},
+        {7, 219},
+        {6, 211},
+        {5, 208},
+        {4, 204},
+        {3, 197},
+        {2, 192},
+        {1, 191},
+        {0.3, 192}
+    };
+    std::vector<std::pair<double, double>> outside_pairs = {
+        {4, 228},
+        {3, 321},
+        {2, 312},
+        {1, 297},
+        {0, 297}
+    };
+    double inside_calibration_location_x = 1000;
+    double outside_calibration_location_x = 1350;
+    double calibration_location_x = inside_calibration_location_x;
+    std::vector<std::pair<double, double>>pixel_world_mapping_relation = inside_pairs;
+    //* 代入水位标定点的x坐标，计算水位的 `像素坐标`
+    double waterline_y = -(A * calibration_location_x + C) / B;
+
+    //* 采用分段线性插值的方法计算水位的 `世界坐标`
+    if (waterline_y >= pixel_world_mapping_relation[0].second) // !水位的像素坐标在最上面的标定点的下方
+    {
+        for (int i = 0; i < pixel_world_mapping_relation.size(); i++)
+        {
+            pair<double, double> _pair = pixel_world_mapping_relation[i];
+            if (waterline_y >= _pair.second)
+            {
+                waterline_y -= _pair.second;
+            }
+            else
+            {
+                double unit = pixel_world_mapping_relation[i - 1].first - pixel_world_mapping_relation[i].first; // 相邻两个标定点间的实际距离
+                double calculated_water_level = _pair.first + (_pair.second - waterline_y) / _pair.second * unit;              // 线性插值
+                return calculated_water_level;
+            }
+        }
+    }
+    else{
+        // !水位的像素坐标在最上面的标定点的上方
+        return -1;
+    }
+
+
+}
+
