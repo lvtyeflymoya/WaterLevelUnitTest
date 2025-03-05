@@ -108,7 +108,7 @@ double SingleImageInference::calculateWaterLine()
     // }
 
     std::vector<std::pair<double, double>> inside_pairs = {
-        {8, 181},
+        {8, 150},
         {7, 219},
         {6, 211},
         {5, 208},

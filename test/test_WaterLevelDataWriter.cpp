@@ -14,6 +14,7 @@ int main()
 
     const string input_folder = "D:/ImageAnnotation/chuanzha/Fabricate";
     const std::string output_json_path = "D:/Cpp_Project/PanoramicTracking/results/waterlevel.json";
+    const string output_folder = "D:/ImageAnnotation/chuanzha/Fabricate/results";
     
     // 统计输入目录下的图片数量
     int imageCount = 0;
@@ -40,7 +41,12 @@ int main()
     {
         cv::Mat src_img = image_reader.getData();
         
+        SingleImageInference processor;
+        processor.inference(src_img);
+        // 构造包含原文件名的保存路径
         string base_name = std::to_string(idx++);
+        string save_path = output_folder + "/" + base_name;
+        processor.save_image(save_path);
         result = water_level_predictor.processSingleImage(src_img, base_name);
         results.push_back(result);
         PLOGV << "正在处理" << idx << "张图片";
